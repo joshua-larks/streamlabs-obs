@@ -3,74 +3,35 @@ import { Component, Prop } from 'vue-property-decorator';
 import { UserService } from 'services/user';
 import { Inject } from 'services/core/injector';
 import { GuestApiService } from 'services/guest-api';
-import { FacemasksService } from 'services/facemasks';
 import electron from 'electron';
 import { NavigationService, TAppPage } from 'services/navigation';
+import BrowserView from 'components/shared/BrowserView';
 
-@Component({})
+@Component({
+  components: { BrowserView },
+})
 export default class Dashboard extends Vue {
   @Inject() userService: UserService;
   @Inject() guestApiService: GuestApiService;
-  @Inject() facemasksService: FacemasksService;
   @Inject() navigationService: NavigationService;
   @Prop() params: Dictionary<string>;
 
-  $refs: {
-    dashboard: Electron.WebviewTag;
-  };
-
-  mounted() {
-    this.$refs.dashboard.addEventListener('did-finish-load', () => {
-      this.guestApiService.exposeApi(this.$refs.dashboard.getWebContents().id, {
-        testAudio: this.testAudio,
-        getStatus: this.getStatus,
-        getDevices: this.getDevices,
-        enableMask: this.enableMask,
-        updateSettings: this.updateSettings,
-        getDownloadProgress: this.getDownloadProgress,
+  onBrowserViewReady(view: Electron.BrowserView) {
+    view.webContents.on('did-finish-load', () => {
+      this.guestApiService.exposeApi(view.webContents.id, {
         navigate: this.navigate,
       });
     });
 
-    this.$refs.dashboard.addEventListener('new-window', e => {
-      electron.remote.shell.openExternal(e.url);
-    });
-  }
+    electron.ipcRenderer.send('webContents-preventPopup', view.webContents.id);
 
-  get loggedIn() {
-    return this.userService.isLoggedIn();
+    view.webContents.on('new-window', (e, url) => {
+      electron.remote.shell.openExternal(url);
+    });
   }
 
   get dashboardUrl() {
     return this.userService.dashboardUrl(this.params.subPage || '');
-  }
-
-  async getStatus() {
-    return this.facemasksService.getDeviceStatus();
-  }
-
-  async getDevices() {
-    return this.facemasksService.getInputDevicesList();
-  }
-
-  async enabledDevice() {
-    return this.facemasksService.getEnabledDevice();
-  }
-
-  async enableMask(uuid: string) {
-    return this.facemasksService.enableMask(uuid);
-  }
-
-  async updateSettings() {
-    return this.facemasksService.startup();
-  }
-
-  async getDownloadProgress() {
-    return this.facemasksService.getDownloadProgress();
-  }
-
-  async testAudio(volume: number) {
-    return;
   }
 
   async navigate(page: TAppPage) {

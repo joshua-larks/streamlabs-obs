@@ -14,7 +14,7 @@ import NameScene from 'components/windows/NameScene.vue';
 import NameFolder from 'components/windows/NameFolder.vue';
 import SourceProperties from 'components/windows/SourceProperties.vue';
 import SourceFilters from 'components/windows/SourceFilters.vue';
-import AddSourceFilter from 'components/windows/AddSourceFilter.vue';
+import AddSourceFilter from 'components/windows/AddSourceFilter';
 import EditStreamInfo from 'components/windows/EditStreamInfo.vue';
 import AdvancedAudio from 'components/windows/AdvancedAudio.vue';
 import Notifications from 'components/windows/Notifications.vue';
@@ -27,6 +27,8 @@ import MediaGallery from 'components/windows/MediaGallery.vue';
 import PlatformAppPopOut from 'components/windows/PlatformAppPopOut.vue';
 import FacemaskSettings from 'components/windows/FacemaskSettings.vue';
 import EditTransform from 'components/windows/EditTransform';
+import OverlayWindow from 'components/windows/OverlayWindow.vue';
+import OverlayPlaceholder from 'components/windows/OverlayPlaceholder';
 import { mutation, StatefulService } from 'services/core/stateful-service';
 import electron from 'electron';
 import Vue from 'vue';
@@ -36,6 +38,8 @@ import { Subject } from 'rxjs';
 import BitGoal from 'components/widgets/goal/BitGoal.vue';
 import DonationGoal from 'components/widgets/goal/DonationGoal.vue';
 import SubGoal from 'components/widgets/goal/SubGoal.vue';
+import StarsGoal from 'components/widgets/goal/StarsGoal.vue';
+import SupporterGoal from 'components/widgets/goal/SupporterGoal.vue';
 import ChatBox from 'components/widgets/ChatBox.vue';
 import FollowerGoal from 'components/widgets/goal/FollowerGoal.vue';
 import ViewerCount from 'components/widgets/ViewerCount.vue';
@@ -81,10 +85,14 @@ export function getComponents() {
     PlatformAppPopOut,
     FacemaskSettings,
     EditTransform,
+    OverlayWindow,
+    OverlayPlaceholder,
 
     BitGoal,
     DonationGoal,
     FollowerGoal,
+    StarsGoal,
+    SupporterGoal,
     ChatBox,
     ViewerCount,
     DonationTicker,
@@ -100,7 +108,7 @@ export function getComponents() {
   };
 }
 
-export interface IWindowOptions {
+export interface IWindowOptions extends Electron.BrowserWindowConstructorOptions {
   componentName: string;
   queryParams?: Dictionary<any>;
   size?: {
@@ -181,7 +189,7 @@ export class WindowsService extends StatefulService<IWindowsState> {
     const window = this.windows[windowId];
     if (window) {
       const bounds = window.getBounds();
-      const currentDisplay = electron.screen.getDisplayMatching(bounds);
+      const currentDisplay = electron.remote.screen.getDisplayMatching(bounds);
       this.UPDATE_SCALE_FACTOR(windowId, currentDisplay.scaleFactor);
     }
   }
@@ -199,9 +207,10 @@ export class WindowsService extends StatefulService<IWindowsState> {
      * to workaround.
      */
     if (options.size && !remote.process.env.CI) {
-      const { width: screenWidth, height: screenHeight } = electron.screen.getDisplayMatching(
-        this.windows.main.getBounds(),
-      ).workAreaSize;
+      const {
+        width: screenWidth,
+        height: screenHeight,
+      } = electron.remote.screen.getDisplayMatching(this.windows.main.getBounds()).workAreaSize;
 
       const SCREEN_PERCENT = 0.75;
 
@@ -215,6 +224,12 @@ export class WindowsService extends StatefulService<IWindowsState> {
 
     ipcRenderer.send('window-showChildWindow', options);
     this.updateChildWindowOptions(options);
+  }
+
+  getMainWindowDisplay() {
+    const window = this.windows.main;
+    const bounds = window.getBounds();
+    return electron.remote.screen.getDisplayMatching(bounds);
   }
 
   closeChildWindow() {
@@ -273,6 +288,7 @@ export class WindowsService extends StatefulService<IWindowsState> {
       minHeight: options.size && options.size.minHeight,
       title: options.title || 'New Window',
       backgroundColor: '#17242D',
+      webPreferences: { nodeIntegration: true, webviewTag: true },
     }));
 
     newWindow.setMenu(null);
@@ -293,6 +309,23 @@ export class WindowsService extends StatefulService<IWindowsState> {
     newWindow.loadURL(`${indexUrl}?windowId=${windowId}`);
 
     return windowId;
+  }
+
+  createOneOffWindowForOverlay(
+    options: Partial<IWindowOptions>,
+    windowId?: string,
+  ): Electron.BrowserWindow {
+    // tslint:disable-next-line:no-parameter-reassignment TODO
+    windowId = windowId || uuid();
+
+    this.CREATE_ONE_OFF_WINDOW(windowId, options);
+
+    const newWindow = (this.windows[windowId] = new BrowserWindow(options));
+
+    const indexUrl = remote.getGlobal('indexUrl');
+    newWindow.loadURL(`${indexUrl}?windowId=${windowId}`);
+
+    return newWindow;
   }
 
   setOneOffFullscreen(windowId: string, fullscreen: boolean) {

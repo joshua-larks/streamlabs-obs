@@ -1,5 +1,4 @@
-import test from 'ava';
-import { useSpectron, focusMain, focusChild, TExecutionContext } from './helpers/spectron/index';
+import { useSpectron, focusMain, focusChild, test } from './helpers/spectron/index';
 import { logIn } from './helpers/spectron/user';
 import { spawn, execSync, spawnSync } from 'child_process';
 import { sleep } from './helpers/sleep';
@@ -12,32 +11,43 @@ const _7z = require('7zip')['7z'];
 
 useSpectron({ skipOnboarding: false });
 
-test('Go through onboarding', async (t: TExecutionContext) => {
+test('Go through the onboarding and autoconfig', async t => {
   const app = t.context.app;
   await focusMain(t);
 
   // Wait for the auth screen to appear
   await app.client.isExisting('button=Twitch');
 
-  await logIn(t);
+  await logIn(t, 'twitch', null, false, true);
+  await sleep(1000);
 
-  // This will show up if there are scene collections to import
-  if (await t.context.app.client.isExisting('button=Continue')) {
-    await t.context.app.client.click('button=Continue');
+  if (await t.context.app.client.isExisting('span=Skip')) {
+    await t.context.app.client.click('span=Skip');
+    await sleep(1000);
   }
 
-  // This will only show up if OBS is installed
-  if (await t.context.app.client.isExisting('button=Start Fresh')) {
-    await t.context.app.client.click('button=Start Fresh');
+  // Don't Import from OBS
+  if (await t.context.app.client.isExisting('h2=Start Fresh')) {
+    await t.context.app.client.click('h2=Start Fresh');
+    await sleep(1000);
   }
 
-  await app.client.click('a=Setup later');
+  // Skip picking a theme
+  if (await t.context.app.client.isExisting('p=Skip')) {
+    await t.context.app.client.click('p=Skip');
+    await sleep(1000);
+  }
 
-  t.pass();
+  // Start auto config
+  t.true(await app.client.isExisting('button=Start'));
+  await app.client.click('button=Start');
+  await app.client.waitForVisible('h2=Sources', 60000);
+
+  // success?
+  t.true(await app.client.isVisible('h2=Sources'), 'Sources selector is visible');
 });
 
-
-test('OBS Importer', async (t: TExecutionContext) => {
+test('OBS Importer', async t => {
   const client = t.context.app.client;
 
   // extract OBS config to the cache dir
@@ -47,13 +57,22 @@ test('OBS Importer', async (t: TExecutionContext) => {
   spawnSync(_7z, ['x', obsCacheZipPath, `-o${cacheDir}`]);
 
   // skip auth
-  await client.click('a=Setup later');
+  if (await t.context.app.client.isExisting('span=Skip')) {
+    await t.context.app.client.click('span=Skip');
+    await sleep(1000);
+  }
 
   // import from OBS
-  t.true(await client.isExisting('button=Import from OBS'), 'OBS detected');
-  await client.click('button=Import from OBS');
-  await client.waitForVisible('button=Continue');
-  await client.click('button=Continue');
+  if (await t.context.app.client.isExisting('h2=Import from OBS')) {
+    await t.context.app.client.click('h2=Import from OBS');
+    await sleep(10000);
+  }
+
+  // Complete onboarding
+  if (await t.context.app.client.isExisting('p=Skip')) {
+    await t.context.app.client.click('p=Skip');
+    await sleep(1000);
+  }
 
   // check collection 1 and sources
   await switchCollection(t, 'Collection 1');

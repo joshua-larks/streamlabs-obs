@@ -461,6 +461,8 @@ export class SourcesService extends StatefulService<ISourcesState> implements IS
       WidgetType.BitGoal,
       WidgetType.DonationGoal,
       WidgetType.FollowerGoal,
+      WidgetType.StarsGoal,
+      WidgetType.SupporterGoal,
       WidgetType.ChatBox,
       WidgetType.ViewerCount,
       WidgetType.DonationTicker,
@@ -484,7 +486,7 @@ export class SourcesService extends StatefulService<ISourcesState> implements IS
           title: $t('Settings for ') + WidgetDisplayData()[widgetType].name,
           queryParams: { sourceId },
           size: {
-            width: 900,
+            width: 920,
             height: 1024,
           },
         });
@@ -517,9 +519,13 @@ export class SourcesService extends StatefulService<ISourcesState> implements IS
       }
     }
 
+    let propertiesName = SourceDisplayData()[source.type].name;
+    if (propertiesManagerType === 'replay') propertiesName = $t('Instant Replay');
+    if (propertiesManagerType === 'streamlabels') propertiesName = $t('Stream Label');
+
     this.windowsService.showWindow({
       componentName: 'SourceProperties',
-      title: $t('Settings for ') + SourceDisplayData()[source.type].name,
+      title: $t('Settings for ') + propertiesName,
       queryParams: { sourceId },
       size: {
         width: 600,
@@ -546,7 +552,7 @@ export class SourcesService extends StatefulService<ISourcesState> implements IS
       queryParams: { sourceType, sourceAddOptions },
       size: {
         width: 600,
-        height: 540,
+        height: 320,
       },
     });
   }

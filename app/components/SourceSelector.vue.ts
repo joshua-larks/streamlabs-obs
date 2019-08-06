@@ -1,5 +1,5 @@
 import Vue from 'vue';
-import { Component } from 'vue-property-decorator';
+import { Component, Watch } from 'vue-property-decorator';
 import { Inject } from '../services/core/injector';
 import { SourcesService } from 'services/sources';
 import { ScenesService, ISceneItemNode, TSceneNode } from 'services/scenes';
@@ -26,6 +26,8 @@ const widgetIconMap = {
   [WidgetType.BitGoal]: 'fas fa-calendar',
   [WidgetType.FollowerGoal]: 'fas fa-calendar',
   [WidgetType.SubGoal]: 'fas fa-calendar',
+  [WidgetType.StarsGoal]: 'fas fa-calendar',
+  [WidgetType.SupporterGoal]: 'fas fa-calendar',
   [WidgetType.MediaShare]: 'icon-share',
 };
 
@@ -73,6 +75,8 @@ export default class SourceSelector extends Vue {
     treeContainer: HTMLDivElement;
     slVueTree: SlVueTree<ISceneNodeData>;
   };
+
+  callCameFromInsideTheHouse = false;
 
   get nodes(): ISlTreeNodeModel<ISceneNodeData>[] {
     // recursive function for transform SceneNode[] to ISlTreeNodeModel[]
@@ -200,6 +204,7 @@ export default class SourceSelector extends Vue {
 
   makeActive(treeNodes: ISlTreeNode<ISceneNodeData>[], ev: MouseEvent) {
     const ids = treeNodes.map(treeNode => treeNode.data.id);
+    this.callCameFromInsideTheHouse = true;
     this.selectionService.select(ids);
   }
 
@@ -215,6 +220,25 @@ export default class SourceSelector extends Vue {
   canShowActions(sceneNodeId: string) {
     const node = this.scene.getNode(sceneNodeId);
     return node.isItem() || node.getNestedItems().length;
+  }
+
+  get lastSelectedId() {
+    return this.selectionService.state.lastSelectedId;
+  }
+
+  @Watch('lastSelectedId')
+  async expandSelectedFolders() {
+    if (this.callCameFromInsideTheHouse) {
+      this.callCameFromInsideTheHouse = false;
+      return;
+    }
+    const node = this.scenesService.activeScene.getNode(this.lastSelectedId);
+    if (!node || this.selectionService.state.selectedIds.length > 1) return;
+    this.expandedFoldersIds = this.expandedFoldersIds.concat(node.getPath().slice(0, -1));
+
+    await this.$nextTick();
+
+    this.$refs[this.lastSelectedId].scrollIntoView({ behavior: 'smooth' });
   }
 
   get activeItemIds() {

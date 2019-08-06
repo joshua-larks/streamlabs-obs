@@ -90,14 +90,6 @@ export class EditMenu extends Menu {
       this.append({ type: 'separator' });
 
       this.append({
-        label: $t('Remove'),
-        accelerator: 'Delete',
-        click: () => {
-          this.selectionService.remove();
-        },
-      });
-
-      this.append({
         label: $t('Transform'),
         submenu: this.transformSubmenu().menu,
       });
@@ -166,6 +158,51 @@ export class EditMenu extends Menu {
       });
     }
 
+    if (this.source) {
+      this.append({
+        label: $t('Remove'),
+        accelerator: 'Delete',
+        click: () => {
+          // if scene items are selected than remove the selection
+          if (this.options.showSceneItemMenu) {
+            this.selectionService.remove();
+          } else {
+            // if no items are selected we are in the MixerSources context menu
+            // if a simple source is selected than remove all sources from the current scene
+            if (!this.source.channel) {
+              const scene = this.scenesService.activeScene;
+              const itemsToRemoveIds = scene
+                .getItems()
+                .filter(item => item.sourceId === this.source.sourceId)
+                .map(item => item.id);
+
+              this.editorCommandsService.executeCommand(
+                'RemoveNodesCommand',
+                scene.getSelection(itemsToRemoveIds),
+              );
+            } else {
+              // remove a global source
+              electron.remote.dialog.showMessageBox(
+                electron.remote.getCurrentWindow(),
+                {
+                  message: $t('This source will be removed from all of your scenes'),
+                  type: 'warning',
+                  buttons: [$t('Cancel'), $t('OK')],
+                },
+                ok => {
+                  if (!ok) return;
+                  this.editorCommandsService.executeCommand(
+                    'RemoveSourceCommand',
+                    this.source.sourceId,
+                  );
+                },
+              );
+            }
+          }
+        },
+      });
+    }
+
     if (this.source && !isMultipleSelection) {
       this.append({
         label: $t('Rename'),
@@ -185,12 +222,12 @@ export class EditMenu extends Menu {
 
       this.append({
         label: $t('Copy Filters'),
-        click: () => this.clipboardService.copyFilters(),
+        click: () => this.clipboardService.copyFilters(this.source.sourceId),
       });
 
       this.append({
         label: $t('Paste Filters'),
-        click: () => this.clipboardService.pasteFilters(),
+        click: () => this.clipboardService.pasteFilters(this.source.sourceId),
         enabled: this.clipboardService.hasFilters(),
       });
 
@@ -239,13 +276,15 @@ export class EditMenu extends Menu {
     this.append({ type: 'separator' });
 
     this.append({
-      label: `Undo ${this.editorCommandsService.nextUndoDescription}`,
+      label: $t('Undo %{action}', { action: this.editorCommandsService.nextUndoDescription }),
+      accelerator: 'CommandOrControl+Z',
       click: () => this.editorCommandsService.undo(),
       enabled: this.editorCommandsService.nextUndo != null,
     });
 
     this.append({
-      label: `Redo ${this.editorCommandsService.nextRedoDescription}`,
+      label: $t('Redo %{action}', { action: this.editorCommandsService.nextRedoDescription }),
+      accelerator: 'CommandOrControl+Y',
       click: () => this.editorCommandsService.redo(),
       enabled: this.editorCommandsService.nextRedo != null,
     });

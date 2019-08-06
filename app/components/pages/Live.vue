@@ -3,7 +3,12 @@
 <div class="live-container">
   <div class="flex__column">
     <div class="flex__item mission-control-container">
-      <webview class="mission-control" id="recentEventsWebview" ref="webview" :src="recenteventsUrl"></webview>
+      <browser-view
+        class="mission-control"
+        :hidden="windowsService.state.main.hideStyleBlockers"
+        :src="recenteventsUrl"
+        :setLocale="true"
+        @ready="onBrowserViewReady" />
     </div>
     <resize-bar
       class="flex__item live-page-resizer"
@@ -59,23 +64,31 @@
 
 <style lang="less" scoped>
 @import '../../styles/index';
+
 .live-container {
+  .padding(2);
+
   display: flex;
   height: 100%;
   width: 100%;
-  .padding(2);
   box-sizing: border-box;
 }
 
 .mission-control-container {
-  flex: 1;
   .radius();
+
+  flex: 1;
   overflow: hidden;
   position: relative;
 }
 
 .mission-control {
   height: 100%;
+}
+
+.mission-control.hidden {
+  position: absolute;
+  top: -10000px;
 }
 
 .studio-controls {
@@ -99,11 +112,12 @@
 }
 
 .live-display-wrapper {
-  max-width: 100%;
   .radius();
+  .border();
+
+  max-width: 100%;
   background-color: var(--section);
   position: relative;
-  .border();
   border-top: 0;
   height: calc(~'100% - 29px');
 }

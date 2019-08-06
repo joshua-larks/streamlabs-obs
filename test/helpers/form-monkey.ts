@@ -34,7 +34,7 @@ export class FormMonkey {
     const formSelector = this.formSelector;
 
     if (formSelector !== DEFAULT_SELECTOR) {
-      await this.client.waitForExist(formSelector, 10000);
+      await this.client.waitForExist(formSelector, 15000);
     }
 
     const result = [];
@@ -89,6 +89,9 @@ export class FormMonkey {
         case 'fontSize':
         case 'fontWeight':
           await this.setSliderValue(input.selector, value);
+          break;
+        case 'twitchTags':
+          await this.setTwitchTagsValue(input.selector, value);
           break;
         default:
           throw new Error(`No setter found for input type = ${input.type}`);
@@ -217,9 +220,12 @@ export class FormMonkey {
 
   async setBoolValue(selector: string, value: boolean) {
     const checkboxSelector = `${selector} input`;
+
+    // click to change the checkbox state
     await this.client.click(checkboxSelector);
 
-    if (!value && (await this.client.isSelected(checkboxSelector))) {
+    // if the current value is not what we need than click one more time
+    if (value !== (await this.getBoolValue(selector))) {
       await this.client.click(checkboxSelector);
     }
   }
@@ -268,13 +274,17 @@ export class FormMonkey {
       await sleep(100);
 
       moveOffset = moveOffset / 2;
-      if (moveOffset < 0.5) throw new Error('Slider position setup failed');
+      if (moveOffset < 0.3) throw new Error('Slider position setup failed');
     }
   }
 
   async getSliderValue(sliderInputSelector: string): Promise<number> {
     // fetch the value from the slider's tooltip
-    return Number(await this.client.getText(`${sliderInputSelector} .vue-slider-tooltip-bottom .vue-slider-tooltip`));
+    return Number(
+      await this.client.getText(
+        `${sliderInputSelector} .vue-slider-tooltip-bottom .vue-slider-tooltip`,
+      ),
+    );
   }
 
   async setInputValue(selector: string, value: string) {
@@ -282,6 +292,29 @@ export class FormMonkey {
     await ((this.client.keys(['Control', 'a']) as any) as Promise<any>); // clear
     await ((this.client.keys('Control') as any) as Promise<any>); // release ctrl key
     await ((this.client.keys(value) as any) as Promise<any>); // type text
+  }
+
+  async setTwitchTagsValue(selector: string, values: string[]) {
+    // clear tags
+    const closeSelector = `${selector} .sp-icon-close`;
+    while (await this.client.isExisting(closeSelector)) {
+      await this.client.click(closeSelector);
+    }
+
+    // click to open the popup
+    await this.client.click(selector);
+
+    // select values
+    const inputSelector = `.v-dropdown-container .sp-search-input`;
+    for (const value of values) {
+      await this.setInputValue(inputSelector, value);
+      await ((this.client.keys('ArrowDown') as any) as Promise<any>);
+      await ((this.client.keys('Enter') as any) as Promise<any>);
+    }
+
+    // click away and wait for the control to dismiss
+    await this.client.click('.tags-container .input-label');
+    await this.client.waitForExist('.sp-input-container.sp-open', 500, true);
   }
 
   private async getAttribute(selector: string, attrName: string) {

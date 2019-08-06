@@ -14,6 +14,7 @@
       @click="navigateDashboard"
       class="tab-button"
       :class="{ active: page === 'Dashboard' }"
+      v-tooltip.right="responsiveClass && $t('Dashboard')"
       :disabled="!isUserLoggedIn || locked">
       <i class="icon-dashboard"/> <span class="tab-button__text">{{ $t('Dashboard') }}</span>
     </button>
@@ -22,6 +23,7 @@
       class="tab-button"
       v-if="featureIsEnabled(availableFeatures.chatbot) && chatbotVisible"
       :class="{ active: page === 'Chatbot'}"
+      v-tooltip.right="responsiveClass && $t('Cloudbot')"
       :disabled="!isUserLoggedIn || locked">
       <i class="icon-community"/> <span class="tab-button__text">{{ $t('Cloudbot') }}</span>
     </button>
@@ -30,14 +32,25 @@
       @click="navigatePlatformAppStore"
       class="tab-button"
       :class="{ 'is-active': page === 'PlatformAppStore' }"
+      v-tooltip.right="responsiveClass && $t('App Store')"
       :disabled="!isUserLoggedIn || locked">
       <i class="icon-store"/> <span class="tab-button__text">{{ $t('App Store') }}</span>
+    </button>
+    <button
+      v-if="creatorSitesVisible"
+      @click="navigateCreatorSites"
+      class="tab-button"
+      :class="{ 'is-active': page === 'CreatorSites' }"
+      v-tooltip.right="responsiveClass && $t('My Website')"
+      :disabled="!isUserLoggedIn || locked">
+      <i class="icon-store"/> <span class="tab-button__text">{{ $t('My Website') }}</span>
       <span class="badge badge--new">{{ $t('New') }}</span>
     </button>
     <button
       @click="navigateOverlays"
       class="tab-button"
       :class="{ 'is-active': page === 'BrowseOverlays' }"
+      v-tooltip.right="responsiveClass && $t('Themes')"
       :disabled="!isUserLoggedIn || locked">
       <i class="icon-themes"/> <span class="tab-button__text">{{ $t('Themes') }}</span>
     </button>
@@ -45,6 +58,7 @@
       @click="navigateStudio"
       class="tab-button"
       :class="{ 'is-active': page === 'Studio' }"
+      v-tooltip.right="responsiveClass && $t('Editor')"
       :disabled="locked">
       <i class="icon-studio"/> <span class="tab-button__text">{{ $t('Editor') }}</span>
     </button>
@@ -52,6 +66,7 @@
       @click="navigateLive"
       class="tab-button"
       :class="{ 'is-active': page === 'Live' }"
+      v-tooltip.right="responsiveClass && $t('Live')"
       :disabled="!isUserLoggedIn || locked">
       <i class="icon-live-dashboard"/> <span class="tab-button__text">{{ $t('Live') }}</span>
     </button>
@@ -70,11 +85,8 @@
         />
       </button>
     </div>
-    <div class="top-nav-item" v-if="isDevMode" style="z-index: 99999">
+    <div class="top-nav-item" v-if="isDevMode" style="z-index: 99999;">
       <a class="link" @click="openDevTools">Dev Tools</a>
-    </div>
-    <div class="top-nav-item" v-if="isDevMode">
-      <a class="link" @click="navigateDesignSystem">Design System</a>
     </div>
     <div class="top-nav-item" :class="{ 'top-nav-item--active': studioModeEnabled }">
       <a
@@ -83,7 +95,7 @@
         <i class="icon-studio-mode-3" v-tooltip.right="studioModeTooltip" /><span>{{ $t('Studio Mode') }}</span>
       </a>
     </div>
-    <div v-if="isUserLoggedIn" class="top-nav-item" :class="{ 'top-nav-item--active': facemasksActive, 'top-nav-item--error': facemasksExtensionError }">
+    <div v-if="isUserLoggedIn" class="top-nav-item" :class="{ 'top-nav-item--active': facemasksActive }">
       <a
         @click="openFacemaskSettingsWindow"
         class="link">
@@ -122,6 +134,7 @@
 
 .top-nav-item {
   .margin-left(2);
+
   display: flex;
   align-items: center;
 
@@ -158,10 +171,11 @@
 @import '../styles/badges';
 
 .top-nav {
+  .padding-h-sides(2);
+
   display: flex;
   flex-direction: row;
   align-items: center;
-  .padding-h-sides(2);
   position: relative;
   max-width: none;
   background-color: var(--background);
@@ -170,9 +184,10 @@
   z-index: 1;
 
   // block the nav buttons while loading
-  &.loading:after {
-    content: '';
+  &.loading::after {
     .absolute(0, 0, 0, 0);
+
+    content: '';
     background-color: black;
     opacity: 0;
   }

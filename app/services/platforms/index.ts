@@ -1,7 +1,7 @@
 import { TwitchService } from './twitch';
 import { YoutubeService } from './youtube';
 import { MixerService } from './mixer';
-import { FacebookService } from './facebook';
+import { FacebookService, IStreamlabsFacebookPages } from './facebook';
 import { StreamingContext } from '../streaming';
 import { TTwitchTag } from './twitch/tags';
 import { TTwitchOAuthScope } from './twitch/scopes';
@@ -14,6 +14,8 @@ export interface IChannelInfo {
   description?: string;
   tags?: Tag[];
   availableTags?: Tag[];
+  hasUpdateTagsPermission?: boolean;
+  facebookPageId?: string;
 }
 
 export interface IGame {
@@ -67,6 +69,27 @@ interface IPlatformCapabilityScopeValidation {
   hasScope: (scope: TOAuthScope) => Promise<boolean>;
 }
 
+/**
+ * Returned from certain platform methods where particular errors
+ * may require special handling.
+ */
+export enum EPlatformCallResult {
+  /**
+   * The call succeeded
+   */
+  Success,
+
+  /**
+   * A generic error occurred
+   */
+  Error,
+
+  /**
+   * The user does not have 2FA enabled on their Twitch account
+   */
+  TwitchTwoFactor,
+}
+
 // All platform services should implement this interface.
 export interface IPlatformService {
   capabilities: Set<TPlatformCapability>;
@@ -80,8 +103,8 @@ export interface IPlatformService {
   authUrl: string;
 
   // This function is responsible for setting up stream
-  // settings for this platform, given an auth.
-  setupStreamSettings: (auth: IPlatformAuth) => void;
+  // settings for this platform.
+  setupStreamSettings: () => Promise<EPlatformCallResult>;
 
   fetchViewerCount: () => Promise<number>;
 
@@ -101,7 +124,7 @@ export interface IPlatformService {
 
   afterGoLive?: (context?: StreamingContext) => Promise<void>;
 
-  prepopulateInfo?: () => Promise<any>;
+  prepopulateInfo: () => Promise<any>;
 
   scheduleStream?: (startTime: string, info: IChannelInfo) => Promise<any>;
 }

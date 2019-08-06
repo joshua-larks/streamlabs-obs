@@ -5,6 +5,7 @@ import {
   IPlatformAuth,
   TPlatformCapability,
   TPlatformCapabilityMap,
+  EPlatformCallResult,
 } from '.';
 import { HostsService } from '../hosts';
 import { SettingsService } from '../settings';
@@ -79,23 +80,26 @@ export class YoutubeService extends StatefulService<IYoutubeServiceState>
     this.state.channelInfo = info;
   }
 
-  setupStreamSettings(auth: IPlatformAuth) {
-    this.fetchStreamKey().then(streamKey => {
-      const settings = this.settingsService.getSettingsFormData('Stream');
+  setupStreamSettings() {
+    return this.fetchStreamKey()
+      .then(streamKey => {
+        const settings = this.settingsService.getSettingsFormData('Stream');
 
-      settings.forEach(subCategory => {
-        subCategory.parameters.forEach(parameter => {
-          if (parameter.name === 'service') {
-            parameter.value = 'YouTube / YouTube Gaming';
-          }
-          if (parameter.name === 'key') {
-            parameter.value = streamKey;
-          }
+        settings.forEach(subCategory => {
+          subCategory.parameters.forEach(parameter => {
+            if (parameter.name === 'service') {
+              parameter.value = 'YouTube / YouTube Gaming';
+            }
+            if (parameter.name === 'key') {
+              parameter.value = streamKey;
+            }
+          });
         });
-      });
 
-      this.settingsService.setSettings('Stream', settings);
-    });
+        this.settingsService.setSettings('Stream', settings);
+        return EPlatformCallResult.Success;
+      })
+      .catch(() => EPlatformCallResult.Error);
   }
 
   fetchDescription(): Promise<string> {
@@ -190,7 +194,7 @@ export class YoutubeService extends StatefulService<IYoutubeServiceState>
 
       return fetch(request)
         .then(handlePlatformResponse)
-        .then(json => json.items[0].liveStreamingDetails.concurrentViewers || 0);
+        .then(json => (json.items[0] && json.items[0].liveStreamingDetails.concurrentViewers) || 0);
     });
   }
 

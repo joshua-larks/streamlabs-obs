@@ -75,6 +75,10 @@ export default class TopNav extends Vue {
     this.navigationService.navigate('PlatformAppStore');
   }
 
+  navigateCreatorSites() {
+    this.navigationService.navigate('CreatorSites');
+  }
+
   navigateOverlays() {
     this.navigationService.navigate('BrowseOverlays');
   }
@@ -85,10 +89,6 @@ export default class TopNav extends Vue {
 
   navigateOnboarding() {
     this.navigationService.navigate('Onboarding');
-  }
-
-  navigateDesignSystem() {
-    this.navigationService.navigate('DesignSystem');
   }
 
   navigateHelp() {
@@ -113,13 +113,6 @@ export default class TopNav extends Vue {
 
   get facemasksActive() {
     return this.facemasksService.state.active;
-  }
-
-  get facemasksExtensionError() {
-    return (
-      this.facemasksService.state.settings.subs_enabled &&
-      !this.facemasksService.state.settings.extension_enabled
-    );
   }
 
   openSettingsWindow() {
@@ -170,6 +163,10 @@ export default class TopNav extends Vue {
       this.userService.isLoggedIn() &&
       this.availableChatbotPlatforms.indexOf(this.userService.platform.type) !== -1
     );
+  }
+
+  get creatorSitesVisible() {
+    return this.userService.isLoggedIn() && this.featureIsEnabled(EAvailableFeatures.creatorSites);
   }
 
   get loading() {

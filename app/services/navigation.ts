@@ -9,10 +9,10 @@ export type TAppPage =
   | 'BrowseOverlays'
   | 'PatchNotes'
   | 'Chatbot'
-  | 'DesignSystem'
   | 'PlatformAppMainPage'
   | 'PlatformAppStore'
-  | 'Help';
+  | 'Help'
+  | 'CreatorSites';
 
 interface INavigationState {
   currentPage: TAppPage;

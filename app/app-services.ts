@@ -82,6 +82,8 @@ export { BitGoalService } from 'services/widgets/settings/bit-goal';
 export { ChatBoxService } from 'services/widgets/settings/chat-box';
 export { DonationGoalService } from 'services/widgets/settings/donation-goal';
 export { FollowerGoalService } from 'services/widgets/settings/follower-goal';
+export { StarsGoalService } from 'services/widgets/settings/stars-goal';
+export { SupporterGoalService } from 'services/widgets/settings/supporter-goal';
 export { ViewerCountService } from 'services/widgets/settings/viewer-count';
 export { StreamBossService } from 'services/widgets/settings/stream-boss';
 export { DonationTickerService } from 'services/widgets/settings/donation-ticker';
@@ -93,3 +95,5 @@ export { SubGoalService } from 'services/widgets/settings/sub-goal';
 export { MediaShareService } from 'services/widgets/settings/media-share';
 export { AlertBoxService } from 'services/widgets/settings/alert-box';
 export { SpinWheelService } from 'services/widgets/settings/spin-wheel';
+
+export { GameOverlayService } from 'services/game-overlay';

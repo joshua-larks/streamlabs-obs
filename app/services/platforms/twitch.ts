@@ -6,6 +6,7 @@ import {
   IGame,
   TPlatformCapability,
   TPlatformCapabilityMap,
+  EPlatformCallResult,
 } from '.';
 import { HostsService } from 'services/hosts';
 import { SettingsService } from 'services/settings';
@@ -81,24 +82,33 @@ export class TwitchService extends Service implements IPlatformService {
 
   // TODO: Some of this code could probably eventually be
   // shared with the Youtube platform.
-  setupStreamSettings(auth: IPlatformAuth) {
-    this.fetchStreamKey().then(key => {
-      const settings = this.settingsService.getSettingsFormData('Stream');
+  setupStreamSettings() {
+    return this.fetchStreamKey()
+      .then(key => {
+        const settings = this.settingsService.getSettingsFormData('Stream');
 
-      settings.forEach(subCategory => {
-        subCategory.parameters.forEach(parameter => {
-          if (parameter.name === 'service') {
-            parameter.value = 'Twitch';
-          }
+        settings.forEach(subCategory => {
+          subCategory.parameters.forEach(parameter => {
+            if (parameter.name === 'service') {
+              parameter.value = 'Twitch';
+            }
 
-          if (parameter.name === 'key') {
-            parameter.value = key;
-          }
+            if (parameter.name === 'key') {
+              parameter.value = key;
+            }
+          });
         });
-      });
 
-      this.settingsService.setSettings('Stream', settings);
-    });
+        this.settingsService.setSettings('Stream', settings);
+        return EPlatformCallResult.Success;
+      })
+      .catch((r: Response) => {
+        if (r.status === 403) {
+          return EPlatformCallResult.TwitchTwoFactor;
+        }
+
+        return EPlatformCallResult.Error;
+      });
   }
 
   fetchNewToken(): Promise<void> {
@@ -132,8 +142,7 @@ export class TwitchService extends Service implements IPlatformService {
       })),
       this.getStreamTags(),
       // Fetch stream tags once per session as they're unlikely to change that often
-      this.streamInfoService.state.channelInfo &&
-      this.streamInfoService.state.channelInfo.availableTags
+      this.streamInfoService.state.channelInfo.availableTags.length
         ? Promise.resolve(this.streamInfoService.state.channelInfo.availableTags)
         : this.getAllTags(),
     ]).then(([channel, tags, availableTags]) => ({
@@ -145,7 +154,7 @@ export class TwitchService extends Service implements IPlatformService {
 
   @requiresToken()
   fetchUserInfo() {
-    const headers = this.getHeaders();
+    const headers = this.getHeaders(true, true);
     const request = new Request(`https://api.twitch.tv/helix/users?id=${this.twitchId}`, {
       headers,
     });
@@ -202,7 +211,14 @@ export class TwitchService extends Service implements IPlatformService {
 
   @requiresToken()
   getAllTags(): Promise<TTwitchTag[]> {
-    return getAllTags(this.getRawHeaders(true));
+    return getAllTags(this.getRawHeaders(true, true));
+  }
+
+  prepopulateInfo() {
+    return this.fetchRawChannelInfo().then(json => ({
+      title: json.status,
+      game: json.game,
+    }));
   }
 
   @requiresToken()
